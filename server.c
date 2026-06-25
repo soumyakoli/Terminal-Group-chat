@@ -1,11 +1,49 @@
 #include"header.h"
+#define MAX_CLIENTS 50
+int client_fd[MAX_CLIENTS];
 
 
 void *client_handler(void *fd){
-		int cfd=*(int *)fd;
-		free(fd);
-		printf("client is connected:%d\n",cfd);
+	int cfd=*(int *)fd;
+	free(fd);
+	printf("client is connected:%d\n",cfd);
 
+	while(1){
+		char msg[500];
+		read(cfd,msg,sizeof(msg));
+
+		char* temp=NULL;
+		if(temp=strstr(msg,"//quit")){
+			if(temp==msg){
+				//printf("Client is dissconnected:%d\n",cfd);
+				for(int i=0;i<MAX_CLIENTS;i++){
+
+					if(client_fd[i]!=cfd && client_fd[i]!=0){
+						sprintf(msg,"client %d disconnected",cfd);
+						write(client_fd[i],msg,strlen(msg)+1);
+					}
+
+					if(client_fd[i]==cfd){
+						client_fd[i]=0;
+						close(cfd);
+						break;
+					}
+				}
+			}
+		}
+
+		else{
+			for(int i=0;i<MAX_CLIENTS;i++){
+				if(client_fd[i]!=cfd && client_fd[i]!=0){
+					write(client_fd[i],msg,strlen(msg)+1);
+				}
+			}
+
+
+		}
+
+
+	}
 }
 
 
@@ -48,42 +86,42 @@ int main(){
 		return 0;
 	}
 
-
+	memset(client_fd,0,sizeof(client_fd));
 
 	/*========== Accept ======================*/
 
 	//printf("waiting for client details\n");
 	while(1){
-		
+
 		nsfd=accept(sfd,(struct sockaddr *)&clientId,&len);
 
 		if(nsfd<0){
 			perror("Accept");
 			return 0;
 		}
-	
-	int *p=malloc(sizeof(int));
-	*p=nsfd;
+
+
+		for(int i=0;i<MAX_CLIENTS;i++){
+			if(client_fd[i]==0){
+				client_fd[i]=nsfd;
+				break;
+			}
+
+
+			if(i>=MAX_CLIENTS){
+				printf("unable to connect\n");
+				continue;
+
+			}
+		}
+
+		int *p=malloc(sizeof(int));
+		*p=nsfd;
+
 		pthread_t tid;
-	   pthread_create(&tid,NULL, client_handler,p);
-		
+		pthread_create(&tid,NULL, client_handler,p);
+
 	}
 
+
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
